@@ -1,7 +1,7 @@
 const app = require('express')();
 const http = require('http');
 const bodyParser = require('body-parser');
-const cors = require('cors')
+const cors = require('cors');
 
 const ThermalPrinter = require("node-thermal-printer").printer;
 const PrinterTypes = require("node-thermal-printer").types;
@@ -51,24 +51,37 @@ app.use((req, res, next) => {
 });
 
 
-let printer = new ThermalPrinter({
+const isLinux = process.platform && process.platform.toLowerCase() === 'linux'
+const printConfig = {
     type: PrinterTypes.EPSON,
-    interface: '/dev/usb/lp1',
+    //interface: process.env.PRINTER || '/dev/usb/lp1', //for ubuntu
+    // interface: 'printer:epson-printer-23',//for windows
+    // driver: require('printer'), //for windows
     options:{
         timeout: 5000
     },
     lineCharacter: "-",
-});
+}
+
+if (isLinux) {
+    printConfig.interface = process.env.PRINTER || '/dev/usb/lp1'
+}
+
+const printer = new ThermalPrinter(printConfig);
 
 // app.options('*', cors())
 // app.use(cors())
 
 app.options('/api/v1/printer', cors())
 app.post('/api/v1/printer', cors(), async (req, res, next) => {
-    const isConnected = await printer.isPrinterConnected();
-    if(!isConnected) {
-        return next(new Error("Printer not connected"))
+    
+    if(isLinux) {
+        const isConnected = await printer.isPrinterConnected();
+        if(!isConnected) {
+            return next(new Error("Printer not connected"))
+        }
     }
+
     const body = require('./exampleData.js');
     // const {body} = req;
     if(Array.isArray(body) && !body.length) {
@@ -95,13 +108,22 @@ app.post('/api/v1/printer', cors(), async (req, res, next) => {
 
         printer.cut();
 
-		const execute = printer.execute();
-        execute.then(result => res.status(200).json({status: "ok", message: result}))
-            .catch(err => next(err))
+        if (isLinux){
+            const execute = printer.execute();
+            execute.then(result => res.status(200).json({status: "ok", message: result}))
+                .catch(err => next(err))
+        } else {
+            require('printer').printDirect({
+                data: printer.getBuffer(),
+                printer: 'epson-printer', // Printer name, if missing then will print to default printer
+                type: 'RAW',
+                success: jobID => res.status(200).json({status: "ok", message: "sent to printer with ID: " + jobID}),
+                error: err => next(err)
+            });
+        }
     } catch (e) {
-       return next(e)
+        return next(e)
     }
-
 });
 
 app.use((req, res, next) => {
