@@ -73,6 +73,12 @@ const printer = new ThermalPrinter(printConfig);
 // app.use(cors())
 
 app.options('/api/v1/printer', cors())
+
+//kill server
+app.get('/api/v1/printer/kill', cors(), (req, res) => {
+    setTimeout(() => process.exit(), 1000);
+})
+
 app.post('/api/v1/printer', cors(), async (req, res, next) => {
     
     if(isLinux) {

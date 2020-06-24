@@ -22,6 +22,9 @@
 ##### https://www.npmjs.com/package/printer
 ##### npm install git+https://github.com/tojocky/node-printer.git
 
+####------------
+##### for autorun add this file to the inside of shell startup  "windows-autorun-printing-service.vbs"
+
 ## for linux
 
 ##### If USB permission denid : sudo chmod +777 /dev/usb/lp1 or sudo chmod -R 777 /dev/usb/lp1
